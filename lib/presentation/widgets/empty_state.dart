@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../common/constants/app_dimensions.dart';
+import '../../common/widgets/app_text.dart';
 
 class EmptyState extends StatelessWidget {
   final String message;
@@ -17,13 +19,11 @@ class EmptyState extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, size: 80, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
+          const SizedBox(height: AppDimensions.padding),
+          AppTextSubtitle(
             message,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
             textAlign: TextAlign.center,
+            color: Colors.grey[600],
           ),
         ],
       ),

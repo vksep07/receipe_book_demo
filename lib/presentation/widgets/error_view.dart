@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../common/constants/app_strings.dart';
+import '../../common/constants/app_dimensions.dart';
+import '../../common/widgets/app_text.dart';
 
 class ErrorView extends StatelessWidget {
   final String message;
@@ -10,7 +13,7 @@ class ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(AppDimensions.paddingXl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -19,23 +22,15 @@ class ErrorView extends StatelessWidget {
               size: 80,
               color: Theme.of(context).colorScheme.error,
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Oops! Something went wrong',
-              style: Theme.of(context).textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
+            const SizedBox(height: AppDimensions.padding),
+            AppTextTitle(AppStrings.errorOccurred, textAlign: TextAlign.center),
+            const SizedBox(height: AppDimensions.paddingSm),
+            AppTextBody(message, textAlign: TextAlign.center),
             if (onRetry != null) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: AppDimensions.spaceXl),
               ElevatedButton(
                 onPressed: onRetry,
-                child: const Text('Try Again'),
+                child: const Text(AppStrings.retry),
               ),
             ],
           ],

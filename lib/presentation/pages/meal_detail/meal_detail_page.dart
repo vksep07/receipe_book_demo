@@ -7,8 +7,16 @@ import '../../blocs/meal_detail/meal_detail_state.dart';
 import '../../widgets/loading_shimmer.dart';
 import '../../widgets/error_view.dart';
 import '../category_meals/category_meals_page.dart';
+import '../../../common/constants/app_strings.dart';
+import '../../../common/constants/app_dimensions.dart';
+import '../../../common/widgets/app_text.dart';
+import '../../../common/widgets/app_spacing.dart';
 
 class MealDetailPage extends StatelessWidget {
+  static const double _appBarExpandedHeight = 300.0;
+  static const double _stepNumberSize = 32.0;
+  static const double _iconSize = 20.0;
+
   final String mealId;
 
   const MealDetailPage({super.key, required this.mealId});
@@ -22,37 +30,32 @@ class MealDetailPage extends StatelessWidget {
                 ..add(LoadMealDetail(mealId)),
       child: Scaffold(
         body: BlocBuilder<MealDetailBloc, MealDetailState>(
-          builder: (context, state) {
-            if (state is MealDetailLoading) {
-              return _buildLoadingState();
-            } else if (state is MealDetailLoaded) {
-              return _buildLoadedState(context, state);
-            } else if (state is MealDetailError) {
-              return ErrorView(
-                message: state.message,
-                onRetry: () {
-                  context.read<MealDetailBloc>().add(LoadMealDetail(mealId));
-                },
-              );
-            }
-            return const SizedBox();
-          },
+          builder: (context, state) => _buildBody(context, state),
         ),
       ),
     );
   }
 
+  Widget _buildBody(BuildContext context, MealDetailState state) {
+    return switch (state) {
+      MealDetailLoading() => _buildLoadingState(),
+      MealDetailLoaded() => _buildLoadedState(context, state),
+      MealDetailError() => _buildErrorState(context, state),
+      _ => const SizedBox.shrink(),
+    };
+  }
+
   Widget _buildLoadingState() {
     return const CustomScrollView(
       slivers: [
-        SliverAppBar(expandedHeight: 300, pinned: true),
+        SliverAppBar(expandedHeight: _appBarExpandedHeight, pinned: true),
         SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.all(16.0),
+            padding: EdgeInsets.all(AppDimensions.padding),
             child: Column(
               children: [
                 LoadingShimmer(height: 30, width: 200),
-                SizedBox(height: 16),
+                VSpace.base(),
                 LoadingShimmer(height: 200),
               ],
             ),
@@ -62,159 +65,34 @@ class MealDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildLoadedState(BuildContext context, MealDetailLoaded state) {
-    final meal = state.meal;
+  Widget _buildErrorState(BuildContext context, MealDetailError state) {
+    return ErrorView(
+      message: state.message,
+      onRetry: () => _retryLoadMeal(context),
+    );
+  }
 
+  void _retryLoadMeal(BuildContext context) {
+    context.read<MealDetailBloc>().add(LoadMealDetail(mealId));
+  }
+
+  Widget _buildLoadedState(BuildContext context, MealDetailLoaded state) {
     return CustomScrollView(
       slivers: [
-        SliverAppBar(
-          expandedHeight: 300,
-          pinned: true,
-          flexibleSpace: FlexibleSpaceBar(
-            title: Text(
-              meal.name,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                shadows: [
-                  Shadow(
-                    offset: Offset(0, 1),
-                    blurRadius: 3.0,
-                    color: Color.fromARGB(255, 0, 0, 0),
-                  ),
-                ],
-              ),
-            ),
-            background: Stack(
-              fit: StackFit.expand,
-              children: [
-                Hero(
-                  tag: 'meal_${meal.name}',
-                  child: CachedNetworkImage(
-                    imageUrl: meal.thumbnail,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.7),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        _buildAppBar(state.meal),
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(AppDimensions.padding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Category and Area Tags
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    if (meal.category != null)
-                      Chip(
-                        label: Text(meal.category!),
-                        avatar: const Icon(Icons.category, size: 16),
-                      ),
-                    if (meal.area != null)
-                      Chip(
-                        label: Text(meal.area!),
-                        avatar: const Icon(Icons.public, size: 16),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Ingredients Section
-                Text(
-                  'Ingredients',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 12),
-                ...meal.ingredients.entries.map((entry) {
-                  final ingredient = entry.value;
-                  final measure = meal.measures[entry.key] ?? '';
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (_) =>
-                                    CategoryMealsPage(ingredient: ingredient),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Theme.of(context).dividerColor,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.check_circle_outline, size: 20),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                ingredient,
-                                style: Theme.of(context).textTheme.bodyLarge,
-                              ),
-                            ),
-                            Text(
-                              measure,
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-                const SizedBox(height: 24),
-
-                // Instructions Section
-                Text(
-                  'Instructions',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 12),
-                if (meal.instructions != null)
-                  ..._buildInstructions(context, meal.instructions!),
-                const SizedBox(height: 24),
-
-                // YouTube Link
-                if (meal.youtube != null)
-                  Center(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        // Open YouTube video
-                        // You can use url_launcher package here
-                      },
-                      icon: const Icon(Icons.play_circle_outline),
-                      label: const Text('Watch Video Tutorial'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
-                  ),
+                _buildMealTags(context, state.meal),
+                const VSpace.xl(),
+                _buildIngredientsSection(context, state.meal),
+                const VSpace.xl(),
+                _buildInstructionsSection(context, state.meal),
+                const VSpace.xl(),
+                if (state.meal.youtube != null) _buildYouTubeButton(context),
               ],
             ),
           ),
@@ -223,44 +101,225 @@ class MealDetailPage extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildInstructions(BuildContext context, String instructions) {
-    final steps =
-        instructions.split('\n').where((s) => s.trim().isNotEmpty).toList();
-    return steps.asMap().entries.map((entry) {
-      final index = entry.key;
-      final step = entry.value;
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
-                shape: BoxShape.circle,
+  Widget _buildAppBar(dynamic meal) {
+    return SliverAppBar(
+      expandedHeight: _appBarExpandedHeight,
+      pinned: true,
+      flexibleSpace: FlexibleSpaceBar(
+        title: Text(
+          meal.name,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            shadows: [
+              Shadow(
+                offset: Offset(0, 1),
+                blurRadius: 3.0,
+                color: Colors.black,
               ),
-              child: Center(
+            ],
+          ),
+        ),
+        background: _buildHeroImage(meal),
+      ),
+    );
+  }
+
+  Widget _buildHeroImage(dynamic meal) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Hero(
+          tag: 'meal_${meal.name}',
+          child: CachedNetworkImage(
+            imageUrl: meal.thumbnail,
+            fit: BoxFit.cover,
+          ),
+        ),
+        _buildImageGradient(),
+      ],
+    );
+  }
+
+  Widget _buildImageGradient() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMealTags(BuildContext context, dynamic meal) {
+    return Wrap(
+      spacing: AppDimensions.spaceSm,
+      children: [
+        if (meal.category != null) _buildCategoryChip(meal.category!),
+        if (meal.area != null) _buildAreaChip(meal.area!),
+      ],
+    );
+  }
+
+  Widget _buildCategoryChip(String category) {
+    return Chip(
+      label: Text(category),
+      avatar: const Icon(Icons.category, size: AppDimensions.iconSm),
+    );
+  }
+
+  Widget _buildAreaChip(String area) {
+    return Chip(
+      label: Text(area),
+      avatar: const Icon(Icons.public, size: AppDimensions.iconSm),
+    );
+  }
+
+  Widget _buildIngredientsSection(BuildContext context, dynamic meal) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppTextHeading(AppStrings.ingredients),
+        const VSpace.md(),
+        ...meal.ingredients.entries.map(
+          (entry) => _buildIngredientItem(
+            context,
+            entry.value,
+            meal.measures[entry.key] ?? '',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIngredientItem(
+    BuildContext context,
+    String ingredient,
+    String measure,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppDimensions.spaceSm),
+      child: InkWell(
+        onTap: () => _navigateToIngredientMeals(context, ingredient),
+        child: Container(
+          padding: const EdgeInsets.all(AppDimensions.paddingMd),
+          decoration: _buildIngredientDecoration(context),
+          child: Row(
+            children: [
+              const Icon(Icons.check_circle_outline, size: _iconSize),
+              const HSpace.md(),
+              Expanded(
                 child: Text(
-                  '${index + 1}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  ingredient,
+                  style: Theme.of(context).textTheme.bodyLarge,
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                step.trim(),
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-            ),
-          ],
+              Text(measure, style: Theme.of(context).textTheme.bodyMedium),
+            ],
+          ),
         ),
-      );
-    }).toList();
+      ),
+    );
+  }
+
+  BoxDecoration _buildIngredientDecoration(BuildContext context) {
+    return BoxDecoration(
+      color: Theme.of(context).cardColor,
+      borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
+      border: Border.all(color: Theme.of(context).dividerColor),
+    );
+  }
+
+  void _navigateToIngredientMeals(BuildContext context, String ingredient) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CategoryMealsPage(ingredient: ingredient),
+      ),
+    );
+  }
+
+  Widget _buildInstructionsSection(BuildContext context, dynamic meal) {
+    if (meal.instructions == null) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppTextHeading(AppStrings.instructions),
+        const VSpace.md(),
+        ..._parseInstructions(meal.instructions!).asMap().entries.map(
+          (entry) => _buildInstructionStep(context, entry.key + 1, entry.value),
+        ),
+      ],
+    );
+  }
+
+  List<String> _parseInstructions(String instructions) {
+    return instructions
+        .split('\n')
+        .where((step) => step.trim().isNotEmpty)
+        .toList();
+  }
+
+  Widget _buildInstructionStep(
+    BuildContext context,
+    int stepNumber,
+    String stepText,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppDimensions.padding),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStepNumber(context, stepNumber),
+          const HSpace.md(),
+          Expanded(
+            child: Text(
+              stepText.trim(),
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepNumber(BuildContext context, int number) {
+    return Container(
+      width: _stepNumberSize,
+      height: _stepNumberSize,
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor,
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          '$number',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildYouTubeButton(BuildContext context) {
+    return Center(
+      child: ElevatedButton.icon(
+        onPressed: () {
+          // TODO: Implement YouTube video opening using url_launcher
+        },
+        icon: const Icon(Icons.play_circle_outline),
+        label: const Text(AppStrings.watchVideo),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.paddingXl,
+            vertical: AppDimensions.paddingMd,
+          ),
+        ),
+      ),
+    );
   }
 }

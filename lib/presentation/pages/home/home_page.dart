@@ -14,6 +14,9 @@ import '../../../core/utils/responsive_layout.dart';
 import '../meal_detail/meal_detail_page.dart';
 import '../category_meals/category_meals_page.dart';
 import '../search/search_page.dart';
+import '../../../common/constants/app_strings.dart';
+import '../../../common/constants/app_dimensions.dart';
+import '../../../common/widgets/app_spacing.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,12 +26,17 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static const int _categoryRows = 3;
+  static const double _categoryGridHeight = 350.0;
+  static const double _carouselHeight = 200.0;
+  static const double _todaysChoiceHeight = 200.0;
+
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    context.read<HomeBloc>().add(LoadHomeData());
+    _loadHomeData();
   }
 
   @override
@@ -37,283 +45,353 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
+  void _loadHomeData() {
+    context.read<HomeBloc>().add(LoadHomeData());
+  }
+
+  void _refreshHomeData() {
+    context.read<HomeBloc>().add(RefreshHomeData());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Recipe Book'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SearchPage()),
-              );
-            },
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(),
       body: BlocBuilder<HomeBloc, HomeState>(
-        builder: (context, state) {
-          if (state is HomeLoading) {
-            return _buildLoadingState();
-          } else if (state is HomeLoaded) {
-            return _buildLoadedState(state);
-          } else if (state is HomeError) {
-            return ErrorView(
-              message: state.message,
-              onRetry: () {
-                context.read<HomeBloc>().add(LoadHomeData());
-              },
-            );
-          }
-          return const SizedBox();
-        },
+        builder: (context, state) => _buildBody(state),
       ),
     );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: const Text(AppStrings.appName),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: _navigateToSearch,
+        ),
+      ],
+    );
+  }
+
+  void _navigateToSearch() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SearchPage()),
+    );
+  }
+
+  Widget _buildBody(HomeState state) {
+    return switch (state) {
+      HomeLoading() => _buildLoadingState(),
+      HomeLoaded() => _buildLoadedState(state),
+      HomeError() => _buildErrorState(state),
+      _ => const SizedBox.shrink(),
+    };
   }
 
   Widget _buildLoadingState() {
     return SingleChildScrollView(
       child: Column(
         children: [
-          const SizedBox(height: 200, child: MealCardShimmer()),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 150,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: 5,
-              itemBuilder:
-                  (context, index) => const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: LoadingShimmer(width: 100, height: 120),
-                  ),
-            ),
-          ),
+          const SizedBox(height: _carouselHeight, child: MealCardShimmer()),
+          const VSpace.base(),
+          _buildCategoryLoadingShimmer(),
         ],
       ),
     );
   }
 
+  Widget _buildCategoryLoadingShimmer() {
+    return SizedBox(
+      height: 150,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: 5,
+        itemBuilder:
+            (context, index) => const Padding(
+              padding: EdgeInsets.all(AppDimensions.paddingSm),
+              child: LoadingShimmer(width: 100, height: 120),
+            ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(HomeError state) {
+    return ErrorView(message: state.message, onRetry: _loadHomeData);
+  }
+
   Widget _buildLoadedState(HomeLoaded state) {
     return RefreshIndicator(
-      onRefresh: () async {
-        context.read<HomeBloc>().add(RefreshHomeData());
-      },
+      onRefresh: () async => _refreshHomeData(),
       child: SingleChildScrollView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Random Meals Carousel
-            const SectionTitle(title: 'Featured Recipes'),
-            _buildFeaturedCarousel(state),
-            const SizedBox(height: 24),
-
-            // Categories Section
-            const SectionTitle(title: 'Categories'),
+            _buildFeaturedSection(state),
+            const VSpace.xl(),
             _buildCategoriesSection(state),
-            const SizedBox(height: 24),
-
-            // Today's Choice
+            const VSpace.xl(),
             if (state.todaysChoice != null) ...[
-              const SectionTitle(title: "Today's Choice"),
-              _buildTodaysChoice(state),
-              const SizedBox(height: 24),
+              _buildTodaysChoiceSection(state),
+              const VSpace.xl(),
             ],
-
-            // Cuisines Section
-            const SectionTitle(title: 'Explore Cuisines'),
             _buildCuisinesSection(state),
-            const SizedBox(height: 24),
+            const VSpace.xl(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildFeaturedCarousel(HomeLoaded state) {
+  Widget _buildFeaturedSection(HomeLoaded state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionTitle(title: AppStrings.featuredRecipes),
+        _buildFeaturedCarousel(state.randomMeals),
+      ],
+    );
+  }
+
+  Widget _buildFeaturedCarousel(List meals) {
     return FadeInAnimation(
       child: CarouselSlider.builder(
-        itemCount: state.randomMeals.length,
-        options: CarouselOptions(
-          height: 200,
-          viewportFraction: ResponsiveLayout.isMobile(context) ? 0.85 : 0.5,
-          enlargeCenterPage: true,
-          autoPlay: true,
-          autoPlayInterval: const Duration(seconds: 5),
-          autoPlayAnimationDuration: const Duration(milliseconds: 800),
-          autoPlayCurve: Curves.fastOutSlowIn,
-        ),
-        itemBuilder: (context, index, realIndex) {
-          final meal = state.randomMeals[index];
-          return MealCard(
-            imageUrl: meal.thumbnail,
-            title: meal.name,
-            subtitle: meal.category,
-            showOverlay: true,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => MealDetailPage(mealId: meal.id),
-                ),
-              );
-            },
-          );
-        },
+        itemCount: meals.length,
+        options: _getCarouselOptions(),
+        itemBuilder: (context, index, _) => _buildCarouselItem(meals[index]),
       ),
+    );
+  }
+
+  CarouselOptions _getCarouselOptions() {
+    return CarouselOptions(
+      height: _carouselHeight,
+      viewportFraction: ResponsiveLayout.isMobile(context) ? 0.85 : 0.5,
+      enlargeCenterPage: true,
+      autoPlay: true,
+      autoPlayInterval: const Duration(seconds: 5),
+      autoPlayAnimationDuration: const Duration(milliseconds: 800),
+      autoPlayCurve: Curves.fastOutSlowIn,
+    );
+  }
+
+  Widget _buildCarouselItem(dynamic meal) {
+    return MealCard(
+      imageUrl: meal.thumbnail,
+      title: meal.name,
+      subtitle: meal.category,
+      showOverlay: true,
+      onTap: () => _navigateToMealDetail(meal.id),
+    );
+  }
+
+  void _navigateToMealDetail(String mealId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => MealDetailPage(mealId: mealId)),
     );
   }
 
   Widget _buildCategoriesSection(HomeLoaded state) {
-    // Split categories into 3 rows
-    final categories = state.categories;
-    final itemsPerRow = (categories.length / 3).ceil();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionTitle(title: AppStrings.categories),
+        _buildCategoriesGrid(state.categories),
+      ],
+    );
+  }
+
+  Widget _buildCategoriesGrid(List categories) {
+    final itemsPerRow = (categories.length / _categoryRows).ceil();
 
     return SizedBox(
-      height: 350,
+      height: _categoryGridHeight,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        children: List.generate(itemsPerRow, (columnIndex) {
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(3, (rowIndex) {
-              final index = columnIndex + (rowIndex * itemsPerRow);
-              if (index >= categories.length) {
-                return const SizedBox(height: 100);
-              }
-              final category = categories[index];
-              return CategoryCard(
-                imageUrl: category.thumbnail,
-                title: category.name,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (_) => CategoryMealsPage(category: category.name),
-                    ),
-                  );
-                },
-              );
-            }),
-          );
-        }),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.paddingMd,
+        ),
+        children: List.generate(
+          itemsPerRow,
+          (columnIndex) =>
+              _buildCategoryColumn(categories, columnIndex, itemsPerRow),
+        ),
       ),
     );
   }
 
-  Widget _buildTodaysChoice(HomeLoaded state) {
-    final meal = state.todaysChoice!;
+  Widget _buildCategoryColumn(
+    List categories,
+    int columnIndex,
+    int itemsPerRow,
+  ) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: List.generate(
+        _categoryRows,
+        (rowIndex) =>
+            _buildCategoryItem(categories, columnIndex, rowIndex, itemsPerRow),
+      ),
+    );
+  }
+
+  Widget _buildCategoryItem(
+    List categories,
+    int columnIndex,
+    int rowIndex,
+    int itemsPerRow,
+  ) {
+    final index = columnIndex + (rowIndex * itemsPerRow);
+
+    if (index >= categories.length) {
+      return const SizedBox(height: 100);
+    }
+
+    final category = categories[index];
+    return CategoryCard(
+      imageUrl: category.thumbnail,
+      title: category.name,
+      onTap: () => _navigateToCategory(category.name),
+    );
+  }
+
+  void _navigateToCategory(String categoryName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CategoryMealsPage(category: categoryName),
+      ),
+    );
+  }
+
+  Widget _buildTodaysChoiceSection(HomeLoaded state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionTitle(title: AppStrings.todaysChoice),
+        _buildTodaysChoiceCard(state.todaysChoice!),
+      ],
+    );
+  }
+
+  Widget _buildTodaysChoiceCard(dynamic meal) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.padding),
       child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => MealDetailPage(mealId: meal.id)),
-          );
-        },
+        onTap: () => _navigateToMealDetail(meal.id),
         child: Container(
-          height: 200,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
+          height: _todaysChoiceHeight,
+          decoration: _buildTodaysChoiceDecoration(),
           child: MealCard(
             imageUrl: meal.thumbnail,
             title: meal.name,
             subtitle: meal.area ?? meal.category,
             showOverlay: true,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => MealDetailPage(mealId: meal.id),
-                ),
-              );
-            },
+            onTap: () => _navigateToMealDetail(meal.id),
           ),
         ),
       ),
     );
   }
 
+  BoxDecoration _buildTodaysChoiceDecoration() {
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(AppDimensions.radius),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.2),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCuisinesSection(HomeLoaded state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionTitle(title: AppStrings.exploreCuisines),
+        _buildCuisinesGrid(state.areas),
+      ],
+    );
+  }
+
+  Widget _buildCuisinesGrid(List areas) {
     return SlideInAnimation(
       delay: const Duration(milliseconds: 300),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.padding),
         child: GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: ResponsiveLayout.getCrossAxisCount(context),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
+            crossAxisSpacing: AppDimensions.spaceMd,
+            mainAxisSpacing: AppDimensions.spaceMd,
             childAspectRatio: 1.2,
           ),
-          itemCount: state.areas.length,
-          itemBuilder: (context, index) {
-            final area = state.areas[index];
-            return ScaleInAnimation(
-              delay: Duration(milliseconds: 50 * index),
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => CategoryMealsPage(area: area.name),
-                    ),
-                  );
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context).primaryColor,
-                        Theme.of(context).primaryColor.withOpacity(0.7),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      area.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
+          itemCount: areas.length,
+          itemBuilder:
+              (context, index) => _buildCuisineItem(areas[index], index),
         ),
       ),
+    );
+  }
+
+  Widget _buildCuisineItem(dynamic area, int index) {
+    return ScaleInAnimation(
+      delay: Duration(milliseconds: 50 * index),
+      child: GestureDetector(
+        onTap: () => _navigateToArea(area.name),
+        child: Container(
+          decoration: _buildCuisineDecoration(),
+          child: Center(
+            child: Text(
+              area.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  BoxDecoration _buildCuisineDecoration() {
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Theme.of(context).primaryColor,
+          Theme.of(context).primaryColor.withOpacity(0.7),
+        ],
+      ),
+      borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 4,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+  }
+
+  void _navigateToArea(String areaName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => CategoryMealsPage(area: areaName)),
     );
   }
 }

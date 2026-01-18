@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../common/constants/app_strings.dart';
+import '../../common/constants/app_dimensions.dart';
 
 class SectionTitle extends StatelessWidget {
   final String title;
@@ -9,13 +11,19 @@ class SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.padding,
+        vertical: AppDimensions.paddingSm,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title, style: Theme.of(context).textTheme.headlineMedium),
           if (onSeeAll != null)
-            TextButton(onPressed: onSeeAll, child: const Text('See All')),
+            TextButton(
+              onPressed: onSeeAll,
+              child: const Text(AppStrings.seeAll),
+            ),
         ],
       ),
     );

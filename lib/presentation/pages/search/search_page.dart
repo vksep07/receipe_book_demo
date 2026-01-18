@@ -10,6 +10,9 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/error_view.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../meal_detail/meal_detail_page.dart';
+import '../../../common/widgets/app_text_field.dart';
+import '../../../common/constants/app_strings.dart';
+import '../../../common/constants/app_dimensions.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -19,6 +22,9 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
+  static const Duration _debounceDelay = Duration(milliseconds: 500);
+  static const int _loadingItemCount = 6;
+
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
 
@@ -30,113 +36,134 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _onSearchChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      context.read<SearchBloc>().add(SearchMeals(query));
-    });
+    _cancelPreviousDebounce();
+    _debounce = Timer(_debounceDelay, () => _searchMeals(query));
+  }
+
+  void _cancelPreviousDebounce() {
+    if (_debounce?.isActive ?? false) {
+      _debounce!.cancel();
+    }
+  }
+
+  void _searchMeals(String query) {
+    context.read<SearchBloc>().add(SearchMeals(query));
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    context.read<SearchBloc>().add(ClearSearch());
+  }
+
+  void _retrySearch() {
+    if (_searchController.text.isNotEmpty) {
+      _searchMeals(_searchController.text);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Search Recipes')),
+      appBar: AppBar(title: const Text(AppStrings.searchTitle)),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              decoration: InputDecoration(
-                hintText: 'Search for recipes (min 3 characters)...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon:
-                    _searchController.text.isNotEmpty
-                        ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            context.read<SearchBloc>().add(ClearSearch());
-                          },
-                        )
-                        : null,
-              ),
-            ),
-          ),
+          _buildSearchField(),
           Expanded(
             child: BlocBuilder<SearchBloc, SearchState>(
-              builder: (context, state) {
-                if (state is SearchInitial) {
-                  return const EmptyState(
-                    message: 'Start typing to search for recipes',
-                    icon: Icons.restaurant_menu,
-                  );
-                } else if (state is SearchLoading) {
-                  return GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: ResponsiveLayout.getCrossAxisCount(
-                        context,
-                      ),
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.75,
-                    ),
-                    itemCount: 6,
-                    itemBuilder: (context, index) => const MealCardShimmer(),
-                  );
-                } else if (state is SearchLoaded) {
-                  return GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: ResponsiveLayout.getCrossAxisCount(
-                        context,
-                      ),
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.75,
-                    ),
-                    itemCount: state.meals.length,
-                    itemBuilder: (context, index) {
-                      final meal = state.meals[index];
-                      return MealCard(
-                        imageUrl: meal.thumbnail,
-                        title: meal.name,
-                        subtitle: meal.category,
-                        showOverlay: true,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => MealDetailPage(mealId: meal.id),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  );
-                } else if (state is SearchEmpty) {
-                  return const EmptyState(
-                    message: 'No recipes found. Try a different search term.',
-                  );
-                } else if (state is SearchError) {
-                  return ErrorView(
-                    message: state.message,
-                    onRetry: () {
-                      if (_searchController.text.isNotEmpty) {
-                        context.read<SearchBloc>().add(
-                          SearchMeals(_searchController.text),
-                        );
-                      }
-                    },
-                  );
-                }
-                return const SizedBox();
-              },
+              builder: (context, state) => _buildSearchResults(state),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.all(AppDimensions.padding),
+      child: AppTextField(
+        controller: _searchController,
+        hintText: AppStrings.searchHint,
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon:
+            _searchController.text.isNotEmpty
+                ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: _clearSearch,
+                )
+                : null,
+        onChanged: _onSearchChanged,
+      ),
+    );
+  }
+
+  Widget _buildSearchResults(SearchState state) {
+    return switch (state) {
+      SearchInitial() => _buildInitialState(),
+      SearchLoading() => _buildLoadingState(),
+      SearchLoaded() => _buildLoadedState(state),
+      SearchEmpty() => _buildEmptyState(),
+      SearchError() => _buildErrorState(state),
+      _ => const SizedBox.shrink(),
+    };
+  }
+
+  Widget _buildInitialState() {
+    return const EmptyState(
+      message: AppStrings.searchPlaceholder,
+      icon: Icons.restaurant_menu,
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return GridView.builder(
+      padding: const EdgeInsets.all(AppDimensions.padding),
+      gridDelegate: _buildGridDelegate(),
+      itemCount: _loadingItemCount,
+      itemBuilder: (_, __) => const MealCardShimmer(),
+    );
+  }
+
+  Widget _buildLoadedState(SearchLoaded state) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(AppDimensions.padding),
+      gridDelegate: _buildGridDelegate(),
+      itemCount: state.meals.length,
+      itemBuilder: (context, index) => _buildMealCard(state.meals[index]),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return const EmptyState(message: AppStrings.noResultsFound);
+  }
+
+  Widget _buildErrorState(SearchError state) {
+    return ErrorView(message: state.message, onRetry: _retrySearch);
+  }
+
+  SliverGridDelegate _buildGridDelegate() {
+    return SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: ResponsiveLayout.getCrossAxisCount(context),
+      crossAxisSpacing: AppDimensions.spaceMd,
+      mainAxisSpacing: AppDimensions.spaceMd,
+      childAspectRatio: 0.75,
+    );
+  }
+
+  Widget _buildMealCard(dynamic meal) {
+    return MealCard(
+      imageUrl: meal.thumbnail,
+      title: meal.name,
+      subtitle: meal.category,
+      showOverlay: true,
+      onTap: () => _navigateToMealDetail(meal.id),
+    );
+  }
+
+  void _navigateToMealDetail(String mealId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => MealDetailPage(mealId: mealId)),
     );
   }
 }
