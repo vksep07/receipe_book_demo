@@ -20,7 +20,9 @@ Install and explore all features on your Android device!
 </div>
 
 ## �📱 App Preview
+### 🎥 Demo Video
 
+https://github.com/user-attachments/assets/cbcf8051-3d2f-444c-95ea-af283a9feae4
 ### 📸 Screenshots
 
 <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px;">
