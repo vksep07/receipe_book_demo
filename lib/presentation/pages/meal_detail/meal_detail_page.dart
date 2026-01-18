@@ -7,6 +7,7 @@ import '../../blocs/meal_detail/meal_detail_state.dart';
 import '../../widgets/loading_shimmer.dart';
 import '../../widgets/error_view.dart';
 import '../../widgets/expandable_ingredients.dart';
+import '../../../core/utils/responsive_layout.dart';
 import '../../../common/constants/app_strings.dart';
 import '../../../common/constants/app_dimensions.dart';
 import '../../../common/widgets/app_text.dart';
@@ -76,23 +77,32 @@ class MealDetailPage extends StatelessWidget {
   }
 
   Widget _buildLoadedState(BuildContext context, MealDetailLoaded state) {
+    final maxWidth =
+        ResponsiveLayout.isDesktop(context) ? 1200.0 : double.infinity;
+
     return CustomScrollView(
       slivers: [
         _buildAppBar(state.meal),
         SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(AppDimensions.padding),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildMealTags(context, state.meal),
-                const VSpace.xl(),
-                _buildIngredientsSection(context, state.meal),
-                const VSpace.xl(),
-                _buildInstructionsSection(context, state.meal),
-                const VSpace.xl(),
-                if (state.meal.youtube != null) _buildYouTubeButton(context),
-              ],
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Padding(
+                padding: const EdgeInsets.all(AppDimensions.padding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildMealTags(context, state.meal),
+                    const VSpace.xl(),
+                    _buildIngredientsSection(context, state.meal),
+                    const VSpace.xl(),
+                    _buildInstructionsSection(context, state.meal),
+                    const VSpace.xl(),
+                    if (state.meal.youtube != null)
+                      _buildYouTubeButton(context),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

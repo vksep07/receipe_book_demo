@@ -207,6 +207,38 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildCategoriesGrid(List categories) {
+    final isWeb =
+        ResponsiveLayout.isDesktop(context) ||
+        ResponsiveLayout.isTablet(context);
+
+    if (isWeb) {
+      final crossAxisCount = ResponsiveLayout.isDesktop(context) ? 6 : 4;
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.padding),
+        child: GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: AppDimensions.spaceSm,
+            mainAxisSpacing: AppDimensions.spaceSm,
+            childAspectRatio: 0.9,
+          ),
+          itemCount: categories.length,
+          itemBuilder: (context, index) {
+            final category = categories[index];
+            return CategoryCard(
+              imageUrl: category.thumbnail,
+              title: category.name,
+              onTap: () => _navigateToCategory(category.name),
+            );
+          },
+        ),
+      );
+    }
+
+    // Mobile horizontal scrolling
     final itemsPerRow = (categories.length / _categoryRows).ceil();
 
     return SizedBox(
