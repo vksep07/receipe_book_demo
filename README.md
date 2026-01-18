@@ -7,15 +7,15 @@ A modern, feature-rich Flutter application for discovering and exploring recipes
 ![Architecture](https://img.shields.io/badge/Architecture-Clean%20Architecture-orange)
 ![State Management](https://img.shields.io/badge/State-BLoC-purple)
 
-## 📥 Download APK
+## � Try the App
 
 <div align="center">
 
-### ✨ Try the App Now ✨
+### ✨ Experience Recipe Book ✨
 
-📦 **[Download Android APK (22.0MB)](https://drive.google.com/file/d/15ITExTcwrP2wSbqkAYcwuRlIXBU0vtyx/view?usp=sharing)**
+🌐 **[Launch Web App](https://vksep07.github.io/receipe_book_demo/)** - Try it instantly in your browser!
 
-Install and explore all features on your Android device!
+📦 **[Download Android APK (22.0MB)](https://drive.google.com/file/d/15ITExTcwrP2wSbqkAYcwuRlIXBU0vtyx/view?usp=sharing)** - Install on your Android device!
 
 </div>
 
