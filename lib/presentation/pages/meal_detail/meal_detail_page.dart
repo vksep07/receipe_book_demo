@@ -6,7 +6,7 @@ import '../../blocs/meal_detail/meal_detail_event.dart';
 import '../../blocs/meal_detail/meal_detail_state.dart';
 import '../../widgets/loading_shimmer.dart';
 import '../../widgets/error_view.dart';
-import '../category_meals/category_meals_page.dart';
+import '../../widgets/expandable_ingredients.dart';
 import '../../../common/constants/app_strings.dart';
 import '../../../common/constants/app_dimensions.dart';
 import '../../../common/widgets/app_text.dart';
@@ -15,7 +15,6 @@ import '../../../common/widgets/app_spacing.dart';
 class MealDetailPage extends StatelessWidget {
   static const double _appBarExpandedHeight = 300.0;
   static const double _stepNumberSize = 32.0;
-  static const double _iconSize = 20.0;
 
   final String mealId;
 
@@ -177,66 +176,10 @@ class MealDetailPage extends StatelessWidget {
   }
 
   Widget _buildIngredientsSection(BuildContext context, dynamic meal) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppTextHeading(AppStrings.ingredients),
-        const VSpace.md(),
-        ...meal.ingredients.entries.map(
-          (entry) => _buildIngredientItem(
-            context,
-            entry.value,
-            meal.measures[entry.key] ?? '',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildIngredientItem(
-    BuildContext context,
-    String ingredient,
-    String measure,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppDimensions.spaceSm),
-      child: InkWell(
-        onTap: () => _navigateToIngredientMeals(context, ingredient),
-        child: Container(
-          padding: const EdgeInsets.all(AppDimensions.paddingMd),
-          decoration: _buildIngredientDecoration(context),
-          child: Row(
-            children: [
-              const Icon(Icons.check_circle_outline, size: _iconSize),
-              const HSpace.md(),
-              Expanded(
-                child: Text(
-                  ingredient,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-              ),
-              Text(measure, style: Theme.of(context).textTheme.bodyMedium),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  BoxDecoration _buildIngredientDecoration(BuildContext context) {
-    return BoxDecoration(
-      color: Theme.of(context).cardColor,
-      borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-      border: Border.all(color: Theme.of(context).dividerColor),
-    );
-  }
-
-  void _navigateToIngredientMeals(BuildContext context, String ingredient) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => CategoryMealsPage(ingredient: ingredient),
-      ),
+    return ExpandableIngredients(
+      ingredients: meal.ingredients,
+      measures: meal.measures,
+      initialCount: 5,
     );
   }
 

@@ -39,6 +39,8 @@ class AppStrings {
   static const String cancel = 'Cancel';
   static const String done = 'Done';
   static const String close = 'Close';
+  static const String showMore = 'Show More';
+  static const String showLess = 'Show Less';
 
   // Empty States
   static const String noData = 'No data available';
