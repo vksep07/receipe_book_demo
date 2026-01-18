@@ -7,19 +7,20 @@ A modern, feature-rich Flutter application for discovering and exploring recipes
 ![Architecture](https://img.shields.io/badge/Architecture-Clean%20Architecture-orange)
 ![State Management](https://img.shields.io/badge/State-BLoC-purple)
 
-## � Download APK
+## 📥 Download APK
 
 <div align="center">
 
 ### ✨ Try the App Now ✨
 
-📦 **[Download Android APK (22.0MB)](https://drive.google.com/file/d/15ITExTcwrP2wSbqkAYcwuRlIXBU0vtyx/view?usp=sharing)**kAYcwuRlIXBU0vtyx/view?usp=sharing)**
+📦 **[Download Android APK (22.0MB)](https://drive.google.com/file/d/15ITExTcwrP2wSbqkAYcwuRlIXBU0vtyx/view?usp=sharing)**
 
 Install and explore all features on your Android device!
 
 </div>
 
-## �📱 App Preview
+## 📱 App Preview
+
 ### 🎥 Demo Video
 
 https://github.com/user-attachments/assets/cbcf8051-3d2f-444c-95ea-af283a9feae4
