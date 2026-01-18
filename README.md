@@ -13,7 +13,7 @@ A modern, feature-rich Flutter application for discovering and exploring recipes
 
 ### ✨ Try the App Now ✨
 
-📦 **[Download Android APK (22.0MB)](build/app/outputs/flutter-apk/app-release.apk)**
+📦 **[Download Android APK (22.0MB)](https://drive.google.com/file/d/15ITExTcwrP2wSbqkAYcwuRlIXBU0vtyx/view?usp=sharing)**kAYcwuRlIXBU0vtyx/view?usp=sharing)**
 
 Install and explore all features on your Android device!
 
